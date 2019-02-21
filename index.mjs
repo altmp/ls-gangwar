@@ -288,6 +288,23 @@ alt.onClient('action', (player) => {
     if(curVeh) {
       alt.removeEntity(curVeh);
       curVeh = null;
+      setTimeout(() => {
+        const nextModel = vehicles[pTeam][Math.round(Math.random() * (vehicles[pTeam].length - 1))];
+        const vehColor = colors[pTeam].rgba;
+        curVeh = alt.createVehicle(nextModel, pos.x, pos.y, pos.z, 0);
+        curVeh.customPrimaryColor = { r: vehColor.r, g: vehColor.g, b: vehColor.b };
+        curVeh.customSecondaryColor = { r: vehColor.r, g: vehColor.g, b: vehColor.b };
+        
+        for(let i = 0; i < 16; ++i) {
+          curVeh.setExtra(i, 0);
+        }
+    
+        setTimeout(() => {
+          alt.emitClient(player, 'setintoveh', curVeh);
+        }, 200);
+        player.setMeta('vehicle', curVeh);
+      }, 500);
+      return;
     }
 
     const nextModel = vehicles[pTeam][Math.round(Math.random() * (vehicles[pTeam].length - 1))];
@@ -340,7 +357,7 @@ alt.on('playerDead', (player, killer, weapon) => {
   const killerTeam = killer.getMeta('team');
   alt.emitClient(null, 'playerKill', JSON.stringify({killerName: killer.name, killerGang: killerTeam, victimName: player.name, victimGang: team, weapon: weaponName}));
 
-  if(currentTurf != null && killer != player) {
+  if(currentTurf != null && killer != player && team != killerTeam) {
     if(currentTurf.contains(player.pos.x, player.pos.y)) {
       const kTeam = killer.getMeta('team');
       currentTurfPoints[kTeam] += 50;

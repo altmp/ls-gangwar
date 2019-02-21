@@ -339,7 +339,7 @@ alt.on('update', () => {
   if((lastTick + 1000) < Date.now()) {
     lastTick = Date.now();
 
-    if(alt.GetEntityHealth(alt.PlayerPedId()) < 100) {
+    if(alt.GetEntityHealth(alt.PlayerPedId()) <= 0) {
       alt.emitServer('respawnMe');
     }
   }
