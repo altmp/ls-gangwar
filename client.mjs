@@ -164,7 +164,7 @@ const teamColors = {
   }
 };
 
-const mainView = new alt.WebView('http://resources/gangwar/client/html/index.html');
+const mainView = new alt.WebView('http://resources/ls-gangwar/client/html/index.html');
 
 let weaponBlip = null;
 let vehicleBlip = null;
