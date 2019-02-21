@@ -7,8 +7,7 @@ const weapons = [
   "WEAPON_PISTOL", "WEAPON_HEAVYPISTOL", "WEAPON_REVOLVER",
   "WEAPON_MICROSMG", "WEAPON_SMG", "WEAPON_COMBATPDW",
   "WEAPON_ASSAULTRIFLE", "WEAPON_CARBINERIFLE",
-  "WEAPON_PUMPSHOTGUN",
-  "WEAPON_GRENADE"
+  "WEAPON_PUMPSHOTGUN"
 ];
 
 function giveWeapons() {
@@ -148,6 +147,23 @@ const positions = {
   }
 };
 
+let leadingTeam = null;
+
+const teamColors = {
+  ballas: {
+    rgba: { r: 196, g: 0, b: 171, a: 150 },
+    hex: 'C400AB'
+  },
+  families: {
+    rgba: { r: 0, g: 127, b: 0, a: 150 },
+    hex: '008000'
+  },
+  vagos: {
+    rgba: { r: 255, g: 191, b: 0, a: 150 },
+    hex: 'FFBF00'
+  }
+};
+
 const mainView = new alt.WebView('http://resources/gangwar/client/html/index.html');
 
 let weaponBlip = null;
@@ -200,8 +216,10 @@ alt.onServer('updateTeamPoints', (infoJson) => {
     });
   }
   teamsArray.sort((a, b) => {
-    return a.scores > b.scores ? 1 : -1;
+    return a.scores < b.scores ? 1 : -1;
   });
+
+  leadingTeam = teamsArray[0].team;
 
   const rightTeam = teamsArray[0].team == myTeam ? teamsArray[1] : teamsArray[0];
 
@@ -276,7 +294,7 @@ alt.onServer('startCapture', (jsonInfo) => {
     alt.RemoveBlip(captureBlip);
     captureBlip = null;
   }
-
+  leadingTeam = null;
   captureBlip = alt.AddBlipForCoord((x1 + x2) / 2, (y1 + y2) /2, 0);
   alt.SetBlipSprite(captureBlip, 84);
   alt.SetBlipFlashTimer(captureBlip, 500);
@@ -290,6 +308,7 @@ alt.onServer('startCapture', (jsonInfo) => {
 
 alt.onServer('stopCapture', () => {
   drawBox = false;
+  leadingTeam = null;
   if(captureBlip) {
     alt.RemoveBlip(captureBlip);
     captureBlip = null;
@@ -298,7 +317,30 @@ alt.onServer('stopCapture', () => {
 
 alt.on('update', () => {
   if(drawBox) {
-    const color = 70 + 50 * Math.sin(((Date.now() / 10) / 180) * Math.PI);
-    alt.DrawBox(drawBoxCoords.x1, drawBoxCoords.y1, 0, drawBoxCoords.x2, drawBoxCoords.y2, 2000, 255, 0, 0, color);
+    const alpha = 70 + 50 * Math.sin(((Date.now() / 10) / 180) * Math.PI);
+
+    let color = {r: 255, g: 255, b: 255, a: 255};
+    if(leadingTeam) {
+      color = teamColors[leadingTeam].rgba;
+    }
+    alt.DrawBox(drawBoxCoords.x1, drawBoxCoords.y1, 0, drawBoxCoords.x2, drawBoxCoords.y2, 2000, color.r, color.g, color.b, alpha);
+    alt.DrawBox(drawBoxCoords.x2, drawBoxCoords.y2, 0, drawBoxCoords.x1, drawBoxCoords.y1, 2000, color.r, color.g, color.b, alpha);
+  }
+});
+
+alt.onServer('showInfo', (text) => {
+  alt.BeginTextCommandDisplayHelp('STRING');
+  alt.AddTextComponentScaleform(text);
+  alt.EndTextCommandDisplayHelp(0, 0, 0, -1);
+});
+
+let lastTick = Date.now();
+alt.on('update', () => {
+  if((lastTick + 1000) < Date.now()) {
+    lastTick = Date.now();
+
+    if(alt.GetEntityHealth(alt.PlayerPedId()) < 100) {
+      alt.emitServer('respawnMe');
+    }
   }
 });

@@ -1,4 +1,5 @@
 import alt from 'alt';
+import chat from 'chat';
 
 const vehicles = {
   ballas: [
@@ -133,8 +134,8 @@ const checkpoints = {
 };
 
 for(let i in positions) {
-  checkpoints[i].vehicle = alt.createCheckpoint(45, positions[i].vehicle.x, positions[i].vehicle.y, positions[i].vehicle.z - 1.1, 5, 1, colors[i].rgba.r, colors[i].rgba.g, colors[i].rgba.b, 100);
-  checkpoints[i].weapon = alt.createCheckpoint(45, positions[i].weapon.x, positions[i].weapon.y, positions[i].weapon.z - 1.1, 1, 1, colors[i].rgba.r, colors[i].rgba.g, colors[i].rgba.b, 100);
+  checkpoints[i].vehicle = alt.createCheckpoint(45, positions[i].vehicle.x, positions[i].vehicle.y, positions[i].vehicle.z - 1.1, 5, 1, colors[i].rgba.r, colors[i].rgba.g, colors[i].rgba.b, 255);
+  checkpoints[i].weapon = alt.createCheckpoint(45, positions[i].weapon.x, positions[i].weapon.y, positions[i].weapon.z - 1.1, 1, 1, colors[i].rgba.r, colors[i].rgba.g, colors[i].rgba.b, 255);
 }
 
 const currentTurfPoints = {
@@ -228,6 +229,7 @@ setInterval(() => {
         if(currentTurf.contains(p.pos.x, p.pos.y)) {
           currentTurfPoints[pTeam]++;
           if(currentTurfPoints[pTeam] >= 1000) {
+            chat.broadcast(`{${colors[pTeam].hex}} ${pTeam} {FFFFFF}got this turf. Next capture started`);
             stopCapture();
             return;
           }
@@ -258,7 +260,7 @@ alt.onClient('teamSelected', (player, teamId) => {
   let team = 'families';
   if(teamId == 2)
     team = 'ballas';
-  else if(team == 3)
+  else if(teamId == 3)
     team = 'vagos';
   
   player.setMeta('team', team);
@@ -313,9 +315,11 @@ alt.on('entityEnterCheckpoint', (cp, entity) => {
     const pTeam = entity.getMeta('team');
     if(cp == checkpoints[pTeam].vehicle) {
       entity.setMeta('checkpoint', 1);
+      alt.emitClient(entity, 'showInfo', '~INPUT_PICKUP~ to get car');
     }
     else if(cp == checkpoints[pTeam].weapon) {
       entity.setMeta('checkpoint', 2);
+      alt.emitClient(entity, 'showInfo', '~INPUT_PICKUP~ to get weapons and ammo');
     }
   }
 });
@@ -336,22 +340,23 @@ alt.on('playerDead', (player, killer, weapon) => {
   const killerTeam = killer.getMeta('team');
   alt.emitClient(null, 'playerKill', JSON.stringify({killerName: killer.name, killerGang: killerTeam, victimName: player.name, victimGang: team, weapon: weaponName}));
 
-  let respawnFunc = (pl) => {
-    const team = pl.getMeta('team');
-    const nextSpawns = positions[team].spawns;
-    pl.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
-  };
-
   if(currentTurf != null && killer != player) {
     if(currentTurf.contains(player.pos.x, player.pos.y)) {
       const kTeam = killer.getMeta('team');
       currentTurfPoints[kTeam] += 50;
-      if(currentTurfPoints[kTeam] >= 1000) {
+      if(currentTurfPoints[pTeam] >= 1000) {
+        chat.broadcast(`{${colors[pTeam].hex} ${pTeam} {FFFFFF}got this turf. Next capture started`);
         stopCapture();
         return;
       }
     }
   }
 
-  setTimeout(respawnFunc.bind(null, player), 5000);
+});
+
+alt.onClient('respawnMe', (player) => {
+  const team = player.getMeta('team');
+  const nextSpawns = positions[team].spawns;
+  alt.log('Trying to respawn "' + player.name + '"');
+  player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
 });
