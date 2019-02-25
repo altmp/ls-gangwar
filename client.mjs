@@ -148,29 +148,38 @@ const positions = {
 };
 
 let leadingTeam = null;
+let lastLeadingTeam = null;
 
 const teamColors = {
   ballas: {
     rgba: { r: 196, g: 0, b: 171, a: 150 },
-    hex: 'C400AB'
+    hex: 'C400AB',
+    blipColor: 83
   },
   families: {
     rgba: { r: 0, g: 127, b: 0, a: 150 },
-    hex: '008000'
+    hex: '008000',
+    blipColor: 52
   },
   vagos: {
     rgba: { r: 255, g: 191, b: 0, a: 150 },
-    hex: 'FFBF00'
+    hex: 'FFBF00',
+    blipColor: 81
   }
 };
 
-const mainView = new alt.WebView('http://resources/gangwar/client/html/index.html');
+const mainView = new alt.WebView('http://resources/ls-gangwar/client/html/index.html');
+let viewLoaded = false;
+
+mainView.on('viewLoaded', () => {
+  viewLoaded = true;
+});
 
 let weaponBlip = null;
 let vehicleBlip = null;
 alt.onServer('updateTeam', (team) => {
   myTeam = team;
-  if(weaponBlip) {
+  if (weaponBlip) {
     alt.RemoveBlip(weaponBlip);
   }
   weaponBlip = alt.AddBlipForCoord(positions[myTeam].weapon.x, positions[myTeam].weapon.y, positions[myTeam].weapon.z);
@@ -179,7 +188,7 @@ alt.onServer('updateTeam', (team) => {
   alt.AddTextComponentSubstringPlayerName('Weapon provider');
   alt.EndTextCommandSetBlipName(weaponBlip);
 
-  if(vehicleBlip) {
+  if (vehicleBlip) {
     alt.RemoveBlip(vehicleBlip);
   }
   vehicleBlip = alt.AddBlipForCoord(positions[myTeam].vehicle.x, positions[myTeam].vehicle.y, positions[myTeam].vehicle.z);
@@ -198,7 +207,7 @@ const colors = {
 alt.onServer('applyAppearance', (team) => {
   alt.setModel('mp_m_freemode_01');
   const components = clothes[team];
-  for(let c in components) {
+  for (let c in components) {
     alt.SetPedComponentVariation(alt.PlayerPedId(), c, components[c].drawable, components[c].texture, 0);
   }
 });
@@ -206,10 +215,11 @@ alt.onServer('applyAppearance', (team) => {
 alt.onServer('updateTeamPoints', (infoJson) => {
   const info = JSON.parse(infoJson);
   let myTeamPoints = info[myTeam];
-  mainView.execJS(`setTeamPoints('${myTeam}', ${myTeamPoints});`);
+  if(viewLoaded)
+    mainView.execJS(`setTeamPoints('${myTeam}', ${myTeamPoints});`);
 
   const teamsArray = [];
-  for(let t in info) {
+  for (let t in info) {
     teamsArray.push({
       team: t,
       scores: info[t]
@@ -228,24 +238,29 @@ alt.onServer('updateTeamPoints', (infoJson) => {
   const colorLeft = colors[myTeam];
   const colorRight = colors[rightTeam.team];
 
-  mainView.execJS(`setProgress(${progressLeft}, ${progressRight}, '#${colorLeft}', '#${colorRight}');`);
+  if(viewLoaded)
+    mainView.execJS(`setProgress(${progressLeft}, ${progressRight}, '#${colorLeft}', '#${colorRight}');`);
 });
 
 alt.onServer('captureStateChanged', (state) => {
-  if(state == false) {
-    mainView.execJS(`hideProgress();`);
+  if (state == false) {
+    if(viewLoaded)
+      mainView.execJS(`hideProgress();`);
   } else {
-    mainView.execJS(`showProgress();`);
+    if(viewLoaded)
+      mainView.execJS(`showProgress();`);
   }
 });
 
 alt.onServer('playerKill', (jsonData) => {
   const data = JSON.parse(jsonData);
-  mainView.execJS(`registerKill('${data.killerName}', '${data.killerGang}', '${data.victimName}', '${data.victimGang}', '${data.weapon}');`);
+  if(viewLoaded)
+    mainView.execJS(`registerKill('${data.killerName}', '${data.killerGang}', '${data.victimName}', '${data.victimGang}', '${data.weapon}');`);
 });
 
 alt.onServer('showTeamSelect', () => {
-  mainView.execJS(`showTeamSelect();`);
+  if(viewLoaded)
+    mainView.execJS(`showTeamSelect();`);
   mainView.focus();
   alt.showCursor(true);
 });
@@ -256,7 +271,7 @@ mainView.on('teamSelected', (teamId) => {
 });
 
 alt.on('keydown', (key) => {
-  if(key == 'E'.charCodeAt(0)) {
+  if (key == 'E'.charCodeAt(0)) {
     alt.emitServer('action');
   }
 });
@@ -269,14 +284,6 @@ alt.onServer('giveAllWeapons', () => {
   giveWeapons();
 });
 
-const drawBoxCoords = {
-  x1: 0,
-  y1: 0,
-  x2: 0,
-  y2: 0
-};
-
-let drawBox = false;
 let captureBlip = null;
 
 alt.onServer('startCapture', (jsonInfo) => {
@@ -285,46 +292,40 @@ alt.onServer('startCapture', (jsonInfo) => {
   const y1 = info.y1;
   const x2 = info.x2;
   const y2 = info.y2;
-  drawBoxCoords.x1 = x1;
-  drawBoxCoords.y1 = y1;
-  drawBoxCoords.x2 = x2;
-  drawBoxCoords.y2 = y2;
-  drawBox = true;
-  if(captureBlip != null) {
+  if (captureBlip != null) {
     alt.RemoveBlip(captureBlip);
     captureBlip = null;
   }
   leadingTeam = null;
-  captureBlip = alt.AddBlipForCoord((x1 + x2) / 2, (y1 + y2) /2, 0);
-  alt.SetBlipSprite(captureBlip, 84);
+  lastLeadingTeam = null;
+  captureBlip = alt.AddBlipForArea((x1 + x2) / 2, (y1 + y2) / 2, 0, 200, 200);
+  // alt.SetBlipSprite(captureBlip, 84);
   alt.SetBlipFlashTimer(captureBlip, 500);
   alt.SetBlipFlashInterval(captureBlip, 500);
   alt.SetBlipColour(captureBlip, 1);
   alt.SetBlipFlashes(captureBlip, true);
+  alt.SetBlipAlpha(captureBlip, 125);
+  alt.SetBlipRotation(captureBlip, 0)
   alt.BeginTextCommandSetBlipName('STRING');
   alt.AddTextComponentSubstringPlayerName('Turf War');
   alt.EndTextCommandSetBlipName(captureBlip);
 });
 
 alt.onServer('stopCapture', () => {
-  drawBox = false;
   leadingTeam = null;
-  if(captureBlip) {
+  lastLeadingTeam = null;
+  if (captureBlip) {
     alt.RemoveBlip(captureBlip);
     captureBlip = null;
   }
 });
 
 alt.on('update', () => {
-  if(drawBox) {
-    const alpha = 70 + 50 * Math.sin(((Date.now() / 10) / 180) * Math.PI);
-
-    let color = {r: 255, g: 255, b: 255, a: 255};
-    if(leadingTeam) {
-      color = teamColors[leadingTeam].rgba;
+  if (captureBlip) {
+    if (captureBlip != null && leadingTeam && leadingTeam != lastLeadingTeam) {
+      alt.SetBlipColour(captureBlip, teamColors[leadingTeam].blipColor);
+      lastLeadingTeam = leadingTeam;
     }
-    alt.DrawBox(drawBoxCoords.x1, drawBoxCoords.y1, 0, drawBoxCoords.x2, drawBoxCoords.y2, 2000, color.r, color.g, color.b, alpha);
-    alt.DrawBox(drawBoxCoords.x2, drawBoxCoords.y2, 0, drawBoxCoords.x1, drawBoxCoords.y1, 2000, color.r, color.g, color.b, alpha);
   }
 });
 
@@ -334,13 +335,13 @@ alt.onServer('showInfo', (text) => {
   alt.EndTextCommandDisplayHelp(0, 0, 0, -1);
 });
 
-let lastTick = Date.now();
-alt.on('update', () => {
-  if((lastTick + 1000) < Date.now()) {
-    lastTick = Date.now();
+// let lastTick = Date.now();
+// alt.on('update', () => {
+//   if ((lastTick + 1000) < Date.now()) {
+//     lastTick = Date.now();
 
-    if(alt.GetEntityHealth(alt.PlayerPedId()) <= 0) {
-      alt.emitServer('respawnMe');
-    }
-  }
-});
+//     if (alt.GetEntityHealth(alt.PlayerPedId()) <= 0) {
+//       alt.emitServer('respawnMe');
+//     }
+//   }
+// });
