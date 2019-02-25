@@ -169,11 +169,14 @@ const teamColors = {
 };
 
 const mainView = new alt.WebView('http://resources/ls-gangwar/client/html/index.html');
+<<<<<<< HEAD
 let viewLoaded = false;
 
 mainView.on('viewLoaded', () => {
   viewLoaded = true;
 });
+=======
+>>>>>>> 8cc27b6b6e2b60c1451d5140ebb81d972ce4c43a
 
 let weaponBlip = null;
 let vehicleBlip = null;
