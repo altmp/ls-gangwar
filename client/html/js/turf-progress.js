@@ -24,7 +24,7 @@ function setProgress(progressLeft, progressRight, colorLeft, colorRight) {
 
 function setTeamPoints(team, points) {
   teamPoints.className = 'team-points ' + team;
-  teamPoints.innerText = `${points}/1000`;
+  teamPoints.innerText = `${points} / 1000`;
 }
 
 function hideProgress() {

@@ -14,14 +14,15 @@
   justify-content: flex-end;
   margin-right: 20px;
   margin-top: 10px;
-  font-size: 24px;
+  font-size: 18px;
   transition: all 0.2s ease;
   max-height: 50px;
   overflow-y: hidden;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.3);
   color: white;
   padding: 10px;
   border-radius: 5px;
+  text-shadow: 0 0 15px rgba(0,0,0,.5);
 }
 
 .kill-list-item-delete {
