@@ -4,8 +4,26 @@ window.addEventListener('load', () => {
   teamSelectLayer = document.querySelector('.team-select-layer');
 });
 
-function showTeamSelect() {
+function showTeamSelect(populationJSON) {
+  const population = JSON.parse(populationJSON);
   teamSelectLayer.style.display = 'flex';
+
+  const teamPlayersSpawn = document.querySelectorAll('.team-select span');
+  console.log(teamPlayersSpawn);
+
+  for(let tp = 0; tp < teamPlayersSpawn.length; ++tp) {
+    switch(tp) {
+      case 0:
+        teamPlayersSpawn[tp].innerHTML = population['families'] + ' players';
+        break;
+      case 1:
+        teamPlayersSpawn[tp].innerHTML = population['ballas'] + ' players';
+        break;
+      case 2:
+        teamPlayersSpawn[tp].innerHTML = population['vagos'] + ' players';
+        break;
+    }
+  }
 }
 
 function hideTeamSelect() {

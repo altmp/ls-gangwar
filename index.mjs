@@ -59,6 +59,17 @@ const weapons = {
   WEAPON_CARBINERIFLE: 'Carbin Rifle',
   WEAPON_PUMPSHOTGUN: 'Pump Shotgun',
   WEAPON_GRENADE: 'Grenade',
+  WEAPON_RAMMED_BY_CAR: 'Jumped out of car',
+  WEAPON_RUN_OVER_BY_CAR: 'Run over by car',
+  WEAPON_FALL: 'Fall',
+  WEAPON_DROWNING: 'Drowning',
+  WEAPON_DROWNING_IN_VEHICLE: 'Drowning',
+  WEAPON_EXPLOSION: 'Explosion',
+  WEAPON_FIRE: 'Fired',
+  WEAPON_BLEEDING: 'Bleeding',
+  WEAPON_BARBED_WIRE: 'Barbed wire',
+  WEAPON_EXHAUSTION: 'Exhaustion',
+  WEAPON_ELECTRIC_FENCE: 'Electric fence'
 };
 
 const weaponHashes = {};
@@ -200,10 +211,10 @@ function startCapture() {
 
   currentTurf = turfs[Math.round(Math.random() * (turfs.length - 1))];
   alt.emitClient(null, 'captureStateChanged', true);
-  alt.emitClient(null, 'startCapture', JSON.stringify({
+  alt.emitClient(null, 'startCapture', {
     x1: currentTurf.x1, y1: currentTurf.y1, x2: currentTurf.x2, y2: currentTurf.y2
-  }));
-  alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
+  });
+  alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
 }
 
 function stopCapture() {
@@ -235,7 +246,7 @@ setInterval(() => {
           }
         }
       }
-      alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
+      alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
     }
   }
   else if(currentTurf != null) {
@@ -243,8 +254,32 @@ setInterval(() => {
   }
 }, 1000);
 
+function getTeamsPopulation() {
+  const population = {
+    ballas: 0,
+    families: 0,
+    vagos: 0
+  };
+  for(let p of players) {
+    const team = p.getMeta('team');
+    if(team) {
+      population[team]++;
+    }
+  }
+  return population;
+}
+
+function broadcastTeamsPopulation() {
+  for(let p of players) {
+    if(p.getMeta('selectingTeam')) {
+      alt.emitClient(p, 'showTeamSelect', getTeamsPopulation());
+    }
+  }
+}
+
 alt.on('playerConnect', (player) => {
-  alt.emitClient(player, 'showTeamSelect');
+  alt.emitClient(player, 'showTeamSelect', getTeamsPopulation());
+  player.setMeta('selectingTeam', true);
   player.setMeta('checkpoint', 0);
   player.setMeta('vehicle', null);
   //player.setMeta('respawnIntervalHandler', null);
@@ -258,6 +293,10 @@ alt.on('playerDisconnect', (player) => {
   if(veh) {
     alt.removeEntity(veh);
   }
+
+  player.setMeta('selectingTeam', false);
+
+  broadcastTeamsPopulation();
 
   // const respawnTimeout = player.getMeta('respawnIntervalHandler');
   // if(respawnTimeout !== null) {
@@ -280,6 +319,8 @@ alt.onClient('teamSelected', (player, teamId) => {
     team = 'vagos';
   
   player.setMeta('team', team);
+  player.setMeta('selectingTeam', false);
+  broadcastTeamsPopulation();
 
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}joined {${colors[team].hex}}${team}`);
 
@@ -290,10 +331,10 @@ alt.onClient('teamSelected', (player, teamId) => {
 
   if(currentTurf != null) {
     alt.emitClient(null, 'captureStateChanged', true);
-    alt.emitClient(null, 'startCapture', JSON.stringify({
+    alt.emitClient(null, 'startCapture', {
       x1: Math.min(currentTurf.x1, currentTurf.x2), y1: Math.min(currentTurf.y1, currentTurf.y2), x2: Math.max(currentTurf.x1, currentTurf.x2), y2: Math.max(currentTurf.y1, currentTurf.y2)
-    }));
-    alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
+    });
+    alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
   }
 });
 
@@ -363,14 +404,17 @@ function respawnPlayer(player) {
 
 alt.on('playerDead', (player, killer, weapon) => {
   console.log(weapon);
-  let weaponName = 'Unknown';
+  let weaponName = 'Killed';
   if(weapon in weaponHashes)
     weaponName = weaponHashes[weapon];
+
+  if(player == killer && weaponName == 'Killed')
+    weaponName = 'Suicided';
 
   const team = player.getMeta('team');
   if(killer) {
     const killerTeam = killer.getMeta('team');
-    alt.emitClient(null, 'playerKill', JSON.stringify({killerName: killer.name, killerGang: killerTeam, victimName: player.name, victimGang: team, weapon: weaponName}));
+    alt.emitClient(null, 'playerKill', {killerName: killer.name, killerGang: killerTeam, victimName: player.name, victimGang: team, weapon: weaponName});
   
     if(currentTurf != null && killer != player && team != killerTeam) {
       if(currentTurf.contains(player.pos.x, player.pos.y)) {
@@ -380,6 +424,15 @@ alt.on('playerDead', (player, killer, weapon) => {
           chat.broadcast(`{${colors[kTeam].hex}} ${kTeam} {FFFFFF}got this turf. Next capture started`);
           stopCapture();
         }
+      }
+    }
+    else if(currentTurf != null && teamp == killerTeam) {
+      const kTeam = killer.getMeta('team');
+      if(currentTurfPoints[kTeam] > 50) {
+        currentTurfPoints[kTeam] -= 50;
+      }
+      else {
+        currentTurfPoints[kTeam] = 0;
       }
     }
   }

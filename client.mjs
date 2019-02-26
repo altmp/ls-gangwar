@@ -212,8 +212,7 @@ alt.onServer('applyAppearance', (team) => {
   }
 });
 
-alt.onServer('updateTeamPoints', (infoJson) => {
-  const info = JSON.parse(infoJson);
+alt.onServer('updateTeamPoints', (info) => {
   let myTeamPoints = info[myTeam];
   if(viewLoaded)
     mainView.execJS(`setTeamPoints('${myTeam}', ${myTeamPoints});`);
@@ -252,15 +251,14 @@ alt.onServer('captureStateChanged', (state) => {
   }
 });
 
-alt.onServer('playerKill', (jsonData) => {
-  const data = JSON.parse(jsonData);
+alt.onServer('playerKill', (data) => {
   if(viewLoaded)
     mainView.execJS(`registerKill('${data.killerName}', '${data.killerGang}', '${data.victimName}', '${data.victimGang}', '${data.weapon}');`);
 });
 
-alt.onServer('showTeamSelect', () => {
+alt.onServer('showTeamSelect', (teamsPopulation) => {
   if(viewLoaded)
-    mainView.execJS(`showTeamSelect();`);
+    mainView.execJS(`showTeamSelect('${JSON.stringify(teamsPopulation)}');`);
   mainView.focus();
   alt.showCursor(true);
 });
@@ -286,8 +284,7 @@ alt.onServer('giveAllWeapons', () => {
 
 let captureBlip = null;
 
-alt.onServer('startCapture', (jsonInfo) => {
-  const info = JSON.parse(jsonInfo);
+alt.onServer('startCapture', (info) => {
   const x1 = info.x1;
   const y1 = info.y1;
   const x2 = info.x2;
