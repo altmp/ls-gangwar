@@ -260,7 +260,7 @@ function getTeamsPopulation() {
     families: 0,
     vagos: 0
   };
-  for(let p of players) {
+  for(let p of alt.players) {
     const team = p.getMeta('team');
     if(team) {
       population[team]++;
@@ -270,7 +270,7 @@ function getTeamsPopulation() {
 }
 
 function broadcastTeamsPopulation() {
-  for(let p of players) {
+  for(let p of alt.players) {
     if(p.getMeta('selectingTeam')) {
       alt.emitClient(p, 'showTeamSelect', getTeamsPopulation());
     }
@@ -278,7 +278,6 @@ function broadcastTeamsPopulation() {
 }
 
 alt.on('playerConnect', (player) => {
-  alt.emitClient(player, 'showTeamSelect', getTeamsPopulation());
   player.setMeta('selectingTeam', true);
   player.setMeta('checkpoint', 0);
   player.setMeta('vehicle', null);
@@ -286,6 +285,11 @@ alt.on('playerConnect', (player) => {
   //player.setMeta('intoVehTimeout', null);
 
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}connected`);
+});
+
+alt.onClient('viewLoaded', (player) => {
+  alt.emitClient(player, 'showTeamSelect', getTeamsPopulation());
+
 });
 
 alt.on('playerDisconnect', (player) => {
@@ -403,13 +407,14 @@ function respawnPlayer(player) {
 }
 
 alt.on('playerDead', (player, killer, weapon) => {
-  console.log(weapon);
   let weaponName = 'Killed';
   if(weapon in weaponHashes)
     weaponName = weaponHashes[weapon];
 
   if(player == killer && weaponName == 'Killed')
     weaponName = 'Suicided';
+  else if(weaponName == 'Killed')
+    console.log('Unknown death reason: ' + weapon.toString(16));
 
   const team = player.getMeta('team');
   if(killer) {
@@ -418,21 +423,19 @@ alt.on('playerDead', (player, killer, weapon) => {
   
     if(currentTurf != null && killer != player && team != killerTeam) {
       if(currentTurf.contains(player.pos.x, player.pos.y)) {
-        const kTeam = killer.getMeta('team');
-        currentTurfPoints[kTeam] += 50;
-        if(currentTurfPoints[kTeam] >= 1000) {
-          chat.broadcast(`{${colors[kTeam].hex}} ${kTeam} {FFFFFF}got this turf. Next capture started`);
+        currentTurfPoints[killerTeam] += 50;
+        if(currentTurfPoints[killerTeam] >= 1000) {
+          chat.broadcast(`{${colors[killerTeam].hex}} ${killerTeam} {FFFFFF}got this turf. Next capture started`);
           stopCapture();
         }
       }
     }
-    else if(currentTurf != null && teamp == killerTeam) {
-      const kTeam = killer.getMeta('team');
-      if(currentTurfPoints[kTeam] > 50) {
-        currentTurfPoints[kTeam] -= 50;
-      }
-      else {
-        currentTurfPoints[kTeam] = 0;
+    else if(currentTurf != null && team == killerTeam) {
+      if(currentTurf.contains(player.pos.x, player.pos.y)) {
+        if(currentTurfPoints[killerTeam] > 50)
+          currentTurfPoints[killerTeam] -= 50;
+        else
+          currentTurfPoints[killerTeam] = 0;
       }
     }
   }

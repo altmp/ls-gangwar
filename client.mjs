@@ -1,4 +1,5 @@
 import alt from 'alt';
+import game from 'natives';
 
 let myTeam = null;
 
@@ -11,10 +12,10 @@ const weapons = [
 ];
 
 function giveWeapons() {
-  let ped = alt.PlayerPedId()
+  let ped = game.playerPedId()
 
   for (const weapon of weapons) {
-    alt.GiveWeaponToPed(ped, alt.GetHashKey(weapon), 9999, false, false)
+    game.giveWeaponToPed(ped, game.getHashKey(weapon), 9999, false, false)
   }
 }
 
@@ -173,6 +174,7 @@ let viewLoaded = false;
 
 mainView.on('viewLoaded', () => {
   viewLoaded = true;
+  alt.emitServer('viewLoaded');
 });
 
 let weaponBlip = null;
@@ -180,22 +182,22 @@ let vehicleBlip = null;
 alt.onServer('updateTeam', (team) => {
   myTeam = team;
   if (weaponBlip) {
-    alt.RemoveBlip(weaponBlip);
+    game.removeBlip(weaponBlip);
   }
-  weaponBlip = alt.AddBlipForCoord(positions[myTeam].weapon.x, positions[myTeam].weapon.y, positions[myTeam].weapon.z);
-  alt.SetBlipSprite(weaponBlip, 110);
-  alt.BeginTextCommandSetBlipName('STRING');
-  alt.AddTextComponentSubstringPlayerName('Weapon provider');
-  alt.EndTextCommandSetBlipName(weaponBlip);
+  weaponBlip = game.addBlipForCoord(positions[myTeam].weapon.x, positions[myTeam].weapon.y, positions[myTeam].weapon.z);
+  game.setBlipSprite(weaponBlip, 110);
+  game.beginTextCommandSetBlipName('STRING');
+  game.addTextComponentSubstringPlayerName('Weapon provider');
+  game.endTextCommandSetBlipName(weaponBlip);
 
   if (vehicleBlip) {
-    alt.RemoveBlip(vehicleBlip);
+    game.removeBlip(vehicleBlip);
   }
-  vehicleBlip = alt.AddBlipForCoord(positions[myTeam].vehicle.x, positions[myTeam].vehicle.y, positions[myTeam].vehicle.z);
-  alt.SetBlipSprite(vehicleBlip, 227);
-  alt.BeginTextCommandSetBlipName('STRING');
-  alt.AddTextComponentSubstringPlayerName('Vehicle provider');
-  alt.EndTextCommandSetBlipName(vehicleBlip);
+  vehicleBlip = game.addBlipForCoord(positions[myTeam].vehicle.x, positions[myTeam].vehicle.y, positions[myTeam].vehicle.z);
+  game.setBlipSprite(vehicleBlip, 227);
+  game.beginTextCommandSetBlipName('STRING');
+  game.addTextComponentSubstringPlayerName('Vehicle provider');
+  game.endTextCommandSetBlipName(vehicleBlip);
 });
 
 const colors = {
@@ -208,7 +210,7 @@ alt.onServer('applyAppearance', (team) => {
   alt.setModel('mp_m_freemode_01');
   const components = clothes[team];
   for (let c in components) {
-    alt.SetPedComponentVariation(alt.PlayerPedId(), c, components[c].drawable, components[c].texture, 0);
+    game.setPedComponentVariation(game.playerPedId(), c, components[c].drawable, components[c].texture, 0);
   }
 });
 
@@ -275,7 +277,7 @@ alt.on('keydown', (key) => {
 });
 
 alt.onServer('setintoveh', veh => {
-  alt.SetPedIntoVehicle(alt.PlayerPedId(), veh.getScriptID(), -1);
+  game.setPedIntoVehicle(game.playerPedId(), veh.getScriptID(), -1);
 });
 
 alt.onServer('giveAllWeapons', () => {
@@ -285,60 +287,53 @@ alt.onServer('giveAllWeapons', () => {
 let captureBlip = null;
 
 alt.onServer('startCapture', (info) => {
-  const x1 = info.x1;
-  const y1 = info.y1;
-  const x2 = info.x2;
-  const y2 = info.y2;
+  const { x1, x2, y1, y2 } = info;
+
   if (captureBlip != null) {
-    alt.RemoveBlip(captureBlip);
+    game.removeBlip(captureBlip);
     captureBlip = null;
   }
+  
   leadingTeam = null;
   lastLeadingTeam = null;
-  captureBlip = alt.AddBlipForArea((x1 + x2) / 2, (y1 + y2) / 2, 0, 200, 200);
-  // alt.SetBlipSprite(captureBlip, 84);
-  alt.SetBlipFlashTimer(captureBlip, 500);
-  alt.SetBlipFlashInterval(captureBlip, 500);
-  alt.SetBlipColour(captureBlip, 1);
-  alt.SetBlipFlashes(captureBlip, true);
-  alt.SetBlipAlpha(captureBlip, 125);
-  alt.SetBlipRotation(captureBlip, 0)
-  alt.BeginTextCommandSetBlipName('STRING');
-  alt.AddTextComponentSubstringPlayerName('Turf War');
-  alt.EndTextCommandSetBlipName(captureBlip);
+  captureBlip = game.addBlipForArea((x1 + x2) / 2, (y1 + y2) / 2, 0, 200, 200);
+  // game.SetBlipSprite(captureBlip, 84);
+  game.setBlipFlashTimer(captureBlip, 500);
+  game.setBlipFlashInterval(captureBlip, 500);
+  game.setBlipColour(captureBlip, 1);
+  game.setBlipFlashes(captureBlip, true);
+  game.setBlipAlpha(captureBlip, 125);
+  game.setBlipRotation(captureBlip, 0)
+  game.beginTextCommandSetBlipName('STRING');
+  game.addTextComponentSubstringPlayerName('Turf War');
+  game.endTextCommandSetBlipName(captureBlip);
 });
 
 alt.onServer('stopCapture', () => {
   leadingTeam = null;
   lastLeadingTeam = null;
   if (captureBlip) {
-    alt.RemoveBlip(captureBlip);
+    game.removeBlip(captureBlip);
     captureBlip = null;
   }
+  mainView.execJS(`setProgress(0, 0, '#000000', '#000000');`);
+
 });
 
 alt.on('update', () => {
   if (captureBlip) {
-    if (captureBlip != null && leadingTeam && leadingTeam != lastLeadingTeam) {
-      alt.SetBlipColour(captureBlip, teamColors[leadingTeam].blipColor);
+    if (leadingTeam && leadingTeam != lastLeadingTeam) {
+      game.setBlipColour(captureBlip, teamColors[leadingTeam].blipColor);
+      lastLeadingTeam = leadingTeam;
+    } else if (!leadingTeam) {
+      game.setBlipColour(captureBlip, 39);
       lastLeadingTeam = leadingTeam;
     }
   }
 });
 
 alt.onServer('showInfo', (text) => {
-  alt.BeginTextCommandDisplayHelp('STRING');
-  alt.AddTextComponentScaleform(text);
-  alt.EndTextCommandDisplayHelp(0, 0, 0, -1);
+  game.beginTextCommandDisplayHelp('STRING');
+  game.addTextComponentScaleform(text);
+  game.endTextCommandDisplayHelp(0, 0, 0, -1);
 });
-
-// let lastTick = Date.now();
-// alt.on('update', () => {
-//   if ((lastTick + 1000) < Date.now()) {
-//     lastTick = Date.now();
-
-//     if (alt.GetEntityHealth(alt.PlayerPedId()) <= 0) {
-//       alt.emitServer('respawnMe');
-//     }
-//   }
-// });
