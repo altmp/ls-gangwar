@@ -377,9 +377,8 @@ alt.on('playerDead', (player, killer, weapon) => {
         const kTeam = killer.getMeta('team');
         currentTurfPoints[kTeam] += 50;
         if(currentTurfPoints[kTeam] >= 1000) {
-          chat.broadcast(`{${colors[kTeam].hex} ${kTeam} {FFFFFF}got this turf. Next capture started`);
+          chat.broadcast(`{${colors[kTeam].hex}} ${kTeam} {FFFFFF}got this turf. Next capture started`);
           stopCapture();
-          return;
         }
       }
     }
