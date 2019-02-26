@@ -8,23 +8,56 @@
   height: 300px;
   display: flex;
   flex-direction: column;
+  text-align: center;
+}
+
+.team-select h1 {
+  color: #222;
+  text-transform: uppercase;
+  font-size: 18px;
+  letter-spacing: 2px;
+  font-weight: 800;
+  margin-bottom: 30px;
+  opacity: .8;
 }
 
 .team-select-item {
   flex: 1 1;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   display: flex;
-  background: rgba(0, 0, 0, 0.7);
-  font-size: 42px;
-  border: 1px solid black;
-  margin-bottom: 5px;
-  transition: all 0.1s ease;
+  background: rgba(0, 0, 0, .5);
+  margin-bottom: 15px;
+  transition: all 0.2s ease;
   cursor: pointer;
   font-weight: bold;
-  text-shadow: #ffffff 1px 1px 1px;
+  border-radius: 5px;
+  font-size: 20px;
+  text-transform: uppercase;
+  color: #eee;
+  padding: 40px 0;
 }
 
 .team-select-item:hover {
-  background: rgba(0, 0, 0, 0.9);
+  color: #333;
+}
+
+.team-select-item.families:hover {
+  background: rgba(0,128,0,.6);
+}
+
+.team-select-item.ballas:hover {
+  background: rgba(196,0,171,.6);
+}
+
+.team-select-item.vagos:hover {
+  background: rgba(255,191,0,.6);
+}
+
+.team-select-item span {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  margin-top: 5px;
 }

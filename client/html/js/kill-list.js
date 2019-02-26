@@ -14,6 +14,7 @@ function deleteOldLists() {
 window.addEventListener('load', () => {
   killList = document.querySelector('.kill-list');
   setInterval(deleteOldLists, 50);
+  registerKill('fronty', 'Vagos', 'Tuxick', 'Ballas', 'UZI');
 });
 
 function registerKill(killerName, killerGang, victimName, victimGang, weapon) {

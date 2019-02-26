@@ -10,22 +10,29 @@
     @font-face {
       font-family: 'Montserrat';
       font-style: normal;
-      font-weight: 100;
+      font-weight: 300;
       src: url('fonts/Montserrat-Light.ttf') format('truetype');
     }
 
     @font-face {
       font-family: 'Montserrat';
       font-style: normal;
-      font-weight: bold;
+      font-weight: 700;
       src: url('fonts/Montserrat-Bold.ttf') format('truetype');
     }
 
     @font-face {
       font-family: 'Montserrat';
       font-style: normal;
-      font-weight: normal;
+      font-weight: 400;
       src: url('fonts/Montserrat-Regular.ttf') format('truetype');
+    }
+
+    @font-face {
+      font-family: 'Montserrat';
+      font-style: normal;
+      font-weight: 800;
+      src: url('fonts/Montserrat-ExtraBold.ttf') format('truetype');
     }
 
     body {
@@ -75,18 +82,19 @@
 
       </div>
       <div class="turf-progress-right">
-        
+
       </div>
     </div>
     <div class="turf-team-progress">
-      Your team points: <span class="team-points ballas">0/1000</span>
+      Your team points: <span class="team-points ballas">0 / 1000</span>
     </div>
   </div>
   <div class="layer team-select-layer">
     <div class="team-select">
-      <div class="team-select-item families" onclick="selectTeam(1)">The Families</div>
-      <div class="team-select-item ballas" onclick="selectTeam(2)">Ballas</div>
-      <div class="team-select-item vagos" onclick="selectTeam(3)">Vagos</div>
+      <h1>Select your gang:</h1>
+      <div class="team-select-item families" onclick="selectTeam(1)">The Families<span>30 players</span></div>
+      <div class="team-select-item ballas" onclick="selectTeam(2)">Ballas<span>30 players</span></div>
+      <div class="team-select-item vagos" onclick="selectTeam(3)">Vagos<span>30 players</span></div>
     </div>
   </div>
   <script>
