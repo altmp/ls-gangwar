@@ -99,7 +99,9 @@
   </div>
   <script>
     if(alt !== undefined) {
-      alt.emit('viewLoaded');
+      window.addEventListener('load', () => {
+        alt.emit('viewLoaded');
+      });
     }
   </script>
 </body>

@@ -9,7 +9,6 @@ function showTeamSelect(populationJSON) {
   teamSelectLayer.style.display = 'flex';
 
   const teamPlayersSpawn = document.querySelectorAll('.team-select span');
-  console.log(teamPlayersSpawn);
 
   for(let tp = 0; tp < teamPlayersSpawn.length; ++tp) {
     switch(tp) {

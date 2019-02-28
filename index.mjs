@@ -211,10 +211,10 @@ function startCapture() {
 
   currentTurf = turfs[Math.round(Math.random() * (turfs.length - 1))];
   alt.emitClient(null, 'captureStateChanged', true);
-  alt.emitClient(null, 'startCapture', {
+  alt.emitClient(null, 'startCapture', JSON.stringify({
     x1: currentTurf.x1, y1: currentTurf.y1, x2: currentTurf.x2, y2: currentTurf.y2
-  });
-  alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
+  }));
+  alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
 }
 
 function stopCapture() {
@@ -246,7 +246,7 @@ setInterval(() => {
           }
         }
       }
-      alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
+      alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
     }
   }
   else if(currentTurf != null) {
@@ -335,10 +335,10 @@ alt.onClient('teamSelected', (player, teamId) => {
 
   if(currentTurf != null) {
     alt.emitClient(null, 'captureStateChanged', true);
-    alt.emitClient(null, 'startCapture', {
+    alt.emitClient(null, 'startCapture', JSON.stringify({
       x1: Math.min(currentTurf.x1, currentTurf.x2), y1: Math.min(currentTurf.y1, currentTurf.y2), x2: Math.max(currentTurf.x1, currentTurf.x2), y2: Math.max(currentTurf.y1, currentTurf.y2)
-    });
-    alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
+    }));
+    alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
   }
 });
 

@@ -214,7 +214,8 @@ alt.onServer('applyAppearance', (team) => {
   }
 });
 
-alt.onServer('updateTeamPoints', (info) => {
+alt.onServer('updateTeamPoints', (infoJson) => {
+  const info = JSON.parse(infoJson);
   let myTeamPoints = info[myTeam];
   if(viewLoaded)
     mainView.execJS(`setTeamPoints('${myTeam}', ${myTeamPoints});`);
@@ -286,7 +287,8 @@ alt.onServer('giveAllWeapons', () => {
 
 let captureBlip = null;
 
-alt.onServer('startCapture', (info) => {
+alt.onServer('startCapture', (infoJson) => {
+  const info = JSON.parse(infoJson);
   const { x1, x2, y1, y2 } = info;
 
   if (captureBlip != null) {
@@ -322,7 +324,7 @@ alt.onServer('stopCapture', () => {
 
 alt.on('update', () => {
   if (captureBlip) {
-    if (leadingTeam && leadingTeam != lastLeadingTeam) {
+    if (leadingTeam && leadingTeam != lastLeadingTeam && leadingTeam in teamColors) {
       game.setBlipColour(captureBlip, teamColors[leadingTeam].blipColor);
       lastLeadingTeam = leadingTeam;
     } else if (!leadingTeam) {
