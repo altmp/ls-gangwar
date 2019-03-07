@@ -170,10 +170,9 @@ const teamColors = {
 };
 
 const mainView = new alt.WebView('http://resources/ls-gangwar/client/html/index.html');
-let viewLoaded = false;
 
 mainView.on('viewLoaded', () => {
-  viewLoaded = true;
+  alt.log('GangWar view loaded');
   alt.emitServer('viewLoaded');
 });
 
@@ -214,11 +213,9 @@ alt.onServer('applyAppearance', (team) => {
   }
 });
 
-alt.onServer('updateTeamPoints', (infoJson) => {
-  const info = JSON.parse(infoJson);
+alt.onServer('updateTeamPoints', (info) => {
   let myTeamPoints = info[myTeam];
-  if(viewLoaded)
-    mainView.execJS(`setTeamPoints('${myTeam}', ${myTeamPoints});`);
+  mainView.emit('setTeamPoints', myTeam, myTeamPoints);
 
   const teamsArray = [];
   for (let t in info) {
@@ -230,8 +227,10 @@ alt.onServer('updateTeamPoints', (infoJson) => {
   teamsArray.sort((a, b) => {
     return a.scores < b.scores ? 1 : -1;
   });
-
-  leadingTeam = teamsArray[0].team;
+  if(teamsArray[0].scores == 0)
+    leadingTeam = null;
+  else
+    leadingTeam = teamsArray[0].team;
 
   const rightTeam = teamsArray[0].team == myTeam ? teamsArray[1] : teamsArray[0];
 
@@ -240,28 +239,24 @@ alt.onServer('updateTeamPoints', (infoJson) => {
   const colorLeft = colors[myTeam];
   const colorRight = colors[rightTeam.team];
 
-  if(viewLoaded)
-    mainView.execJS(`setProgress(${progressLeft}, ${progressRight}, '#${colorLeft}', '#${colorRight}');`);
+  mainView.emit('setProgress', progressLeft, progressRight, '#' + colorLeft, '#' + colorRight);
 });
 
 alt.onServer('captureStateChanged', (state) => {
   if (state == false) {
-    if(viewLoaded)
-      mainView.execJS(`hideProgress();`);
+    mainView.emit('hideProgress');
   } else {
-    if(viewLoaded)
-      mainView.execJS(`showProgress();`);
+    mainView.emit('showProgress');
   }
 });
 
 alt.onServer('playerKill', (data) => {
-  if(viewLoaded)
-    mainView.execJS(`registerKill('${data.killerName}', '${data.killerGang}', '${data.victimName}', '${data.victimGang}', '${data.weapon}');`);
+    mainView.emit('registerKill', data);
 });
 
 alt.onServer('showTeamSelect', (teamsPopulation) => {
-  if(viewLoaded)
-    mainView.execJS(`showTeamSelect('${JSON.stringify(teamsPopulation)}');`);
+  alt.log(JSON.stringify(teamsPopulation, null, 4));
+  mainView.emit('showTeamSelect', teamsPopulation);
   mainView.focus();
   alt.showCursor(true);
 });
@@ -287,8 +282,7 @@ alt.onServer('giveAllWeapons', () => {
 
 let captureBlip = null;
 
-alt.onServer('startCapture', (infoJson) => {
-  const info = JSON.parse(infoJson);
+alt.onServer('startCapture', (info) => {
   const { x1, x2, y1, y2 } = info;
 
   if (captureBlip != null) {
@@ -300,15 +294,16 @@ alt.onServer('startCapture', (infoJson) => {
   lastLeadingTeam = null;
   captureBlip = game.addBlipForArea((x1 + x2) / 2, (y1 + y2) / 2, 0, 200, 200);
   // game.SetBlipSprite(captureBlip, 84);
+  game.setBlipColour(captureBlip, 39);
   game.setBlipFlashTimer(captureBlip, 500);
   game.setBlipFlashInterval(captureBlip, 500);
-  game.setBlipColour(captureBlip, 1);
   game.setBlipFlashes(captureBlip, true);
   game.setBlipAlpha(captureBlip, 125);
   game.setBlipRotation(captureBlip, 0)
   game.beginTextCommandSetBlipName('STRING');
   game.addTextComponentSubstringPlayerName('Turf War');
   game.endTextCommandSetBlipName(captureBlip);
+  mainView.emit('setProgress', 0, 0, '#000000', '#000000');
 });
 
 alt.onServer('stopCapture', () => {
@@ -318,8 +313,7 @@ alt.onServer('stopCapture', () => {
     game.removeBlip(captureBlip);
     captureBlip = null;
   }
-  mainView.execJS(`setProgress(0, 0, '#000000', '#000000');`);
-
+  mainView.emit('setProgress', 0, 0, '#000000', '#000000');
 });
 
 alt.on('update', () => {
@@ -338,4 +332,8 @@ alt.onServer('showInfo', (text) => {
   game.beginTextCommandDisplayHelp('STRING');
   game.addTextComponentScaleform(text);
   game.endTextCommandDisplayHelp(0, 0, 0, -1);
+});
+
+alt.onServer('updatePlayersOnline', (players) => {
+  mainView.emit('updatePlayersOnline', players);
 });

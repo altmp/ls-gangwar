@@ -63,18 +63,28 @@
       color: #FFBF00;
     }
   </style>
+  <script>
+    window.addEventListener('load', () => {
+      console.log('view loaded');00
+      alt.emit('viewLoaded');
+    });
+  </script>
   <link href="css/kill-list.css" rel="stylesheet" type="text/css">
   <link href="css/turf-progress.css" rel="stylesheet" type="text/css">
   <link href="css/team-select.css" rel="stylesheet" type="text/css">
+  <link href="css/players-online.css" rel="stylesheet" type="text/css">
   <script src="js/kill-list.js"></script>
   <script src="js/turf-progress.js"></script>
   <script src="js/team-select.js"></script>
+  <script src="js/players-online.js"></script>
 </head>
-
 <body>
   <div class="layer kill-list-layer">
     <div class="kill-list">
     </div>
+  </div>
+  <div class="layer players-online-layer">
+    <div class="players-online">0 players</div>
   </div>
   <div class="layer turf-progress-layer">
     <div class="turf-progress">
@@ -92,18 +102,10 @@
   <div class="layer team-select-layer">
     <div class="team-select">
       <h1>Select your gang:</h1>
-      <div class="team-select-item families" onclick="selectTeam(1)">The Families<span>30 players</span></div>
-      <div class="team-select-item ballas" onclick="selectTeam(2)">Ballas<span>30 players</span></div>
-      <div class="team-select-item vagos" onclick="selectTeam(3)">Vagos<span>30 players</span></div>
+      <div class="team-select-item families" onclick="selectTeam(1)">The Families<span>0 players</span></div>
+      <div class="team-select-item ballas" onclick="selectTeam(2)">Ballas<span>0 players</span></div>
+      <div class="team-select-item vagos" onclick="selectTeam(3)">Vagos<span>0 players</span></div>
     </div>
   </div>
-  <script>
-    if(alt !== undefined) {
-      window.addEventListener('load', () => {
-        alt.emit('viewLoaded');
-      });
-    }
-  </script>
 </body>
-
 </html>

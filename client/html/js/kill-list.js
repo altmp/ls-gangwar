@@ -41,3 +41,7 @@ function registerKill(killerName, killerGang, victimName, victimGang, weapon) {
 
   killList.appendChild(killListItem);
 }
+
+alt.on('registerKill', (data) => {
+  registerKill(data.killerName, data.killerGang, data.victimName, data.victimGang, data.weapon);
+});

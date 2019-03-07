@@ -34,3 +34,19 @@ function hideProgress() {
 function showProgress() {
   turfProgressLayer.style.display = 'flex';
 }
+
+alt.on('setProgress', (progressLeft, progressRight, colorLeft, colorRight) => {
+  setProgress(progressLeft, progressRight, colorLeft, colorRight);
+});
+
+alt.on('setTeamPoints', (team, points) => {
+  setTeamPoints(team, points);
+});
+
+alt.on('hideProgress', () => {
+  hideProgress();
+});
+
+alt.on('showProgress', () => {
+  showProgress();
+});

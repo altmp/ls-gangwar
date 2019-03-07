@@ -195,7 +195,6 @@ let currentTurf = null;
 const xStartTurf = -404.1889;
 const yStartTurf = -1221.2967;
 
-
 for(let i = 0; i < 5; ++i) {
   for(let j = 0; j < 5; ++j) {
     const x1 = xStartTurf + 200 * i;
@@ -211,10 +210,10 @@ function startCapture() {
 
   currentTurf = turfs[Math.round(Math.random() * (turfs.length - 1))];
   alt.emitClient(null, 'captureStateChanged', true);
-  alt.emitClient(null, 'startCapture', JSON.stringify({
+  alt.emitClient(null, 'startCapture', {
     x1: currentTurf.x1, y1: currentTurf.y1, x2: currentTurf.x2, y2: currentTurf.y2
-  }));
-  alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
+  });
+  alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
 }
 
 function stopCapture() {
@@ -246,7 +245,7 @@ setInterval(() => {
           }
         }
       }
-      alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
+      alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
     }
   }
   else if(currentTurf != null) {
@@ -277,19 +276,31 @@ function broadcastTeamsPopulation() {
   }
 }
 
+function broadcastPlayersOnline(add) {
+  if(add !== undefined)
+    alt.emitClient(null, 'updatePlayersOnline', alt.players.length + add);
+  else
+    alt.emitClient(null, 'updatePlayersOnline', alt.players.length);
+}
+
 alt.on('playerConnect', (player) => {
   player.setMeta('selectingTeam', true);
   player.setMeta('checkpoint', 0);
   player.setMeta('vehicle', null);
+  player.setMeta('canSpawnVehicle', 0);
+
   //player.setMeta('respawnIntervalHandler', null);
   //player.setMeta('intoVehTimeout', null);
+  broadcastPlayersOnline();
 
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}connected`);
+  alt.log(`${player.name} connected`);
 });
 
 alt.onClient('viewLoaded', (player) => {
+  alt.log('View loaded for ' + player.name);
   alt.emitClient(player, 'showTeamSelect', getTeamsPopulation());
-
+  alt.emitClient(player, 'updatePlayersOnline', alt.players.length);
 });
 
 alt.on('playerDisconnect', (player) => {
@@ -301,6 +312,7 @@ alt.on('playerDisconnect', (player) => {
   player.setMeta('selectingTeam', false);
 
   broadcastTeamsPopulation();
+  broadcastPlayersOnline(-1);
 
   // const respawnTimeout = player.getMeta('respawnIntervalHandler');
   // if(respawnTimeout !== null) {
@@ -313,6 +325,7 @@ alt.on('playerDisconnect', (player) => {
   // }
 
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}disconnected`);
+  alt.log(`${player.name} disconnected`);
 })
 
 alt.onClient('teamSelected', (player, teamId) => {
@@ -328,23 +341,29 @@ alt.onClient('teamSelected', (player, teamId) => {
 
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}joined {${colors[team].hex}}${team}`);
 
+  alt.log(player.name + ' joined ' + team);
   const nextSpawns = positions[team].spawns;
+
   player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
   alt.emitClient(player, 'applyAppearance', team);
   alt.emitClient(player, 'updateTeam', team);
 
   if(currentTurf != null) {
     alt.emitClient(null, 'captureStateChanged', true);
-    alt.emitClient(null, 'startCapture', JSON.stringify({
+    alt.emitClient(null, 'startCapture', {
       x1: Math.min(currentTurf.x1, currentTurf.x2), y1: Math.min(currentTurf.y1, currentTurf.y2), x2: Math.max(currentTurf.x1, currentTurf.x2), y2: Math.max(currentTurf.y1, currentTurf.y2)
-    }));
-    alt.emitClient(null, 'updateTeamPoints', JSON.stringify(currentTurfPoints));
+    });
+    alt.emitClient(null, 'updateTeamPoints', currentTurfPoints);
   }
 });
 
 alt.onClient('action', (player) => {
   const cp = player.getMeta('checkpoint');
   if(cp == 1) {
+    const nextTimeSpawn = player.getMeta('canSpawnVehicle');
+    if(nextTimeSpawn > Date.now())
+      return;
+
     const pTeam = player.getMeta('team');
     const pos = player.pos;
     let curVeh = player.getMeta('vehicle');
@@ -372,6 +391,7 @@ alt.onClient('action', (player) => {
     //player.setMeta('intoVehTimeout', nextTimeout);
 
     player.setMeta('vehicle', curVeh);
+    player.setMeta('canSpawnVehicle', Date.now() + 400);
   }
   else if(cp == 2) {
     alt.emitClient(player, 'giveAllWeapons');
@@ -400,13 +420,21 @@ alt.on('entityLeaveCheckpoint', (cp, entity) => {
 
 function respawnPlayer(player) {
   const team = player.getMeta('team');
-  const nextSpawns = positions[team].spawns;
-  alt.log('Trying to respawn "' + player.name + '"');
-  player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
-  player.setMeta('respawnIntervalHandler', null);
+
+  if(team in positions)
+  {
+    const nextSpawns = positions[team].spawns;
+    alt.log('Trying to respawn "' + player.name + '"');
+    player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
+    alt.log('Respawning ' + player.name);
+    return;
+  }
+  player.pos = {x: 0, y: 0, z: 72};
 }
 
 alt.on('playerDead', (player, killer, weapon) => {
+  const respawnTimeout = setTimeout(respawnPlayer.bind(null, player), 5000);
+
   let weaponName = 'Killed';
   if(weapon in weaponHashes)
     weaponName = weaponHashes[weapon];
@@ -417,6 +445,9 @@ alt.on('playerDead', (player, killer, weapon) => {
     console.log('Unknown death reason: ' + weapon.toString(16));
 
   const team = player.getMeta('team');
+  if(!killer)
+    killer = player;
+
   if(killer) {
     const killerTeam = killer.getMeta('team');
     alt.emitClient(null, 'playerKill', {killerName: killer.name, killerGang: killerTeam, victimName: player.name, victimGang: team, weapon: weaponName});
@@ -441,6 +472,5 @@ alt.on('playerDead', (player, killer, weapon) => {
   }
 
   //player.setMeta('respawnIntervalHandler', 
-    setTimeout(respawnPlayer.bind(null, player), 5000)
   //);
 });

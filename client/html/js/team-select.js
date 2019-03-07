@@ -4,8 +4,7 @@ window.addEventListener('load', () => {
   teamSelectLayer = document.querySelector('.team-select-layer');
 });
 
-function showTeamSelect(populationJSON) {
-  const population = JSON.parse(populationJSON);
+function showTeamSelect(population) {
   teamSelectLayer.style.display = 'flex';
 
   const teamPlayersSpawn = document.querySelectorAll('.team-select span');
@@ -33,3 +32,8 @@ function selectTeam(teamId) {
   alt.emit('teamSelected', teamId);
   hideTeamSelect();
 }
+
+alt.on('showTeamSelect', (population) => {
+  console.log(population);
+  showTeamSelect(population);
+});
