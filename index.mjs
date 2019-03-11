@@ -1,5 +1,20 @@
 import alt from 'alt';
 import chat from 'chat';
+import fs from 'fs';
+import { resolve, dirname } from 'path';
+
+const __dirname = dirname(decodeURI(new URL(import.meta.url).pathname)).replace(/^\/([A-Za-z]):\//, '$1:/');
+
+let blacklistData = {};
+if(fs.existsSync(__dirname + '/blacklist.json'))
+{
+  blacklistData = JSON.parse(fs.readFileSync(__dirname + '/blacklist.json').toString());
+}
+
+function addToBlacklist(info) {
+  blacklistData[info] = true;
+  fs.writeFileSync(__dirname + '/blacklist.json', JSON.stringify(blacklistData, null, 4));
+}
 
 const vehicles = {
   ballas: [
@@ -283,11 +298,91 @@ function broadcastPlayersOnline(add) {
     alt.emitClient(null, 'updatePlayersOnline', alt.players.length);
 }
 
+alt.onClient('authData', (player, data) => {
+
+  const licenseHash = data.sc;
+  player.setMeta('licenseHash', licenseHash);
+  let dsInfo = null;
+  if(data.discord && data.discord.id) {
+    dsInfo = data.discord.id;
+    player.setMeta('discordId', dsInfo);
+  }
+  if(licenseHash in blacklistData || (dsInfo !== null && dsInfo in blacklistData)) {
+    chat.broadcast(`{5555AA}${player.name} {FFFFFF}kicked (Blacklisted)`);
+    player.kick();
+  }
+});
+
+chat.registerCmd('kick', (player, args) => {
+  if (player.getMeta('admin')) {
+    if (args.length > 0) {
+      let players = alt.getPlayersByName(args.join(' '));
+
+      if(players.length != 0) {
+        for (const p of players) {
+          chat.send(p, `{FF0000}You was kicked from the server`);
+          chat.broadcast(`{5555AA}${p.name} {FFFFFF}kicked`);
+          p.kick();
+        }
+      }
+      else {
+        for(const p of players) {
+          if(p.name.startsWith(args.join(' '))) {
+            chat.send(p, `{FF0000}You was kicked from the server`);
+            chat.broadcast(`{5555AA}${p.name} {FFFFFF}kicked`);
+            p.kick();
+          }
+        }
+      }
+    }
+  } else {
+    chat.send(player, '{FF00FF}You don`t have enough permissions to use this command');
+  }
+});
+
+chat.registerCmd('ban', (player, args) => {
+  if (player.getMeta('admin')) {
+    if (args.length > 0) {
+      let players = alt.getPlayersByName(args.join(' '));
+
+      if(players.length != 0) {
+        for (const p of players) {
+          chat.send(p, `{FF0000}You was banned from the server`);
+          chat.broadcast(`{5555AA}${p.name} {FFFFFF}banned`);
+          addToBlacklist(p.getMeta('licenseHash'));
+          const discordId = p.getMeta('discordId');
+          if(discordId) {
+            addToBlacklist(discordId);
+          }
+          p.kick();
+        }
+      }
+      else {
+        for(const p of players) {
+          if(p.name.startsWith(args.join(' '))) {
+            chat.send(p, `{FF0000}You was banned from the server`);
+            chat.broadcast(`{5555AA}${p.name} {FFFFFF}banned`);
+            addToBlacklist(p.getMeta('licenseHash'));
+            const discordId = p.getMeta('discordId');
+            if(discordId) {
+              addToBlacklist(discordId);
+            }
+            p.kick();
+          }
+        }
+      }
+    }
+  } else {
+    chat.send(player, '{FF00FF}You don`t have enough permissions to use this command');
+  }
+});
+
 alt.on('playerConnect', (player) => {
   player.setMeta('selectingTeam', true);
   player.setMeta('checkpoint', 0);
   player.setMeta('vehicle', null);
   player.setMeta('canSpawnVehicle', 0);
+  player.setMeta('teamKills', 0);
 
   //player.setMeta('respawnIntervalHandler', null);
   //player.setMeta('intoVehTimeout', null);
@@ -295,6 +390,8 @@ alt.on('playerConnect', (player) => {
 
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}connected`);
   alt.log(`${player.name} connected`);
+
+  alt.emitClient(player, 'youAreConnected');
 });
 
 alt.onClient('viewLoaded', (player) => {
@@ -419,22 +516,25 @@ alt.on('entityLeaveCheckpoint', (cp, entity) => {
 });
 
 function respawnPlayer(player) {
-  const team = player.getMeta('team');
+  try {
+    const team = player.getMeta('team');
 
-  if(team in positions)
-  {
-    const nextSpawns = positions[team].spawns;
-    alt.log('Trying to respawn "' + player.name + '"');
-    player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
-    alt.log('Respawning ' + player.name);
-    return;
+    if(team in positions)
+    {
+      const nextSpawns = positions[team].spawns;
+      alt.log('Trying to respawn "' + player.name + '"');
+      player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
+      alt.log('Respawning ' + player.name);
+      return;
+    }
+    player.pos = {x: 0, y: 0, z: 72};
   }
-  player.pos = {x: 0, y: 0, z: 72};
+  catch(err) {
+    alt.logError(err.message);
+  }
 }
 
 alt.on('playerDead', (player, killer, weapon) => {
-  const respawnTimeout = setTimeout(respawnPlayer.bind(null, player), 5000);
-
   let weaponName = 'Killed';
   if(weapon in weaponHashes)
     weaponName = weaponHashes[weapon];
@@ -447,6 +547,10 @@ alt.on('playerDead', (player, killer, weapon) => {
   const team = player.getMeta('team');
   if(!killer)
     killer = player;
+
+  const nextSpawns = positions[team].spawns;
+  const spawnPos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
+  player.spawn(spawnPos.x, spawnPos.y, spawnPos.z, 5000);
 
   if(killer) {
     const killerTeam = killer.getMeta('team');
@@ -469,8 +573,32 @@ alt.on('playerDead', (player, killer, weapon) => {
           currentTurfPoints[killerTeam] = 0;
       }
     }
-  }
 
-  //player.setMeta('respawnIntervalHandler', 
-  //);
+    if(team == killerTeam && player != killer) {
+      let teamKills = killer.getMeta('teamKills');
+      if(teamKills == 2) {
+        chat.broadcast(`{5555AA}${killer.name} {AA0000}kicked for team killing`);
+        killer.kick();
+      }
+      else {
+        chat.broadcast(`{5555AA}${killer.name} {AA0000}warned [${teamKills + 1}/3] for team killing`);
+        killer.setMeta('teamKills', (teamKills + 1));
+      }
+    }
+  }
 });
+
+setInterval(() => {
+  for(let p of alt.players) {
+    const lastPos = p.getMeta('lastPos');
+    if(lastPos) {
+      if(lastPos.x == p.pos.x && lastPos.y == p.pos.y && lastPos.z == p.pos.z) {
+        chat.broadcast(`${p.name} {FFFFFF}was kicked for being AFK`);
+        p.kick();
+      }
+    }
+    else {
+      p.setMeta('lastPos', p.pos);
+    }
+  }
+}, 60000);
