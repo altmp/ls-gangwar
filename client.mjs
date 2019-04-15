@@ -308,7 +308,7 @@ alt.on('keydown', (key) => {
 });
 
 alt.onServer('setintoveh', veh => {
-  game.setPedIntoVehicle(game.playerPedId(), veh.getScriptID(), -1);
+  game.setPedIntoVehicle(game.playerPedId(), veh.scriptID, -1);
 });
 
 alt.onServer('giveAllWeapons', () => {
