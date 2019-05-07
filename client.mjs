@@ -193,27 +193,9 @@ function loadWebView()
   });
 }
 
-let lastLoadAttempt = Date.now();
-
-alt.on('update', () => {
-  if(!viewLoaded && (lastLoadAttempt + 5000) < Date.now())
-  {
-    lastLoadAttempt = Date.now();
-    loadWebView();
-  }
-});
-
 alt.onServer('youAreConnected', () => {
   chat.pushLine('Loading...');
-  lastLoadAttempt = Date.now();
   loadWebView();
-});
-
-alt.on('keydown', (key) => {
-  if(key == 0x61 && !viewLoaded) {
-    lastLoadAttempt = Date.now();
-    loadWebView();
-  }
 });
 
 let weaponBlip = null;
@@ -255,7 +237,8 @@ alt.onServer('applyAppearance', (team) => {
 
 alt.onServer('updateTeamPoints', (info) => {
   let myTeamPoints = info[myTeam];
-  mainView.emit('setTeamPoints', myTeam, myTeamPoints);
+  if(viewLoaded)
+    mainView.emit('setTeamPoints', myTeam, myTeamPoints);
 
   const teamsArray = [];
   for (let t in info) {
@@ -279,10 +262,14 @@ alt.onServer('updateTeamPoints', (info) => {
   const colorLeft = colors[myTeam];
   const colorRight = colors[rightTeam.team];
 
-  mainView.emit('setProgress', progressLeft, progressRight, '#' + colorLeft, '#' + colorRight);
+  if(viewLoaded)
+    mainView.emit('setProgress', progressLeft, progressRight, '#' + colorLeft, '#' + colorRight);
 });
 
 alt.onServer('captureStateChanged', (state) => {
+  if(!viewLoaded)
+    return;
+
   if (state == false) {
     mainView.emit('hideProgress');
   } else {
@@ -291,10 +278,16 @@ alt.onServer('captureStateChanged', (state) => {
 });
 
 alt.onServer('playerKill', (data) => {
-    mainView.emit('registerKill', data);
+  if(!viewLoaded)
+    return;
+
+  mainView.emit('registerKill', data);
 });
 
 alt.onServer('showTeamSelect', (teamsPopulation) => {
+  if(!viewLoaded)
+    return;
+
   alt.log(JSON.stringify(teamsPopulation, null, 4));
   mainView.emit('showTeamSelect', teamsPopulation);
   mainView.focus();
@@ -308,7 +301,7 @@ alt.on('keydown', (key) => {
 });
 
 alt.onServer('setintoveh', veh => {
-  game.setPedIntoVehicle(game.playerPedId(), veh.getScriptID(), -1);
+  game.setPedIntoVehicle(game.playerPedId(), veh.scriptID, -1);
 });
 
 alt.onServer('giveAllWeapons', () => {
@@ -338,7 +331,9 @@ alt.onServer('startCapture', (info) => {
   game.beginTextCommandSetBlipName('STRING');
   game.addTextComponentSubstringPlayerName('Turf War');
   game.endTextCommandSetBlipName(captureBlip);
-  mainView.emit('setProgress', 0, 0, '#000000', '#000000');
+  
+  if(viewLoaded)
+    mainView.emit('setProgress', 0, 0, '#000000', '#000000');
 });
 
 alt.onServer('stopCapture', () => {
@@ -348,7 +343,9 @@ alt.onServer('stopCapture', () => {
     game.removeBlip(captureBlip);
     captureBlip = null;
   }
-  mainView.emit('setProgress', 0, 0, '#000000', '#000000');
+
+  if(viewLoaded)
+    mainView.emit('setProgress', 0, 0, '#000000', '#000000');
 });
 
 alt.on('update', () => {
@@ -370,6 +367,8 @@ alt.onServer('showInfo', (text) => {
 });
 
 alt.onServer('updatePlayersOnline', (players) => {
+  if(!viewLoaded)
+    return;
   mainView.emit('updatePlayersOnline', players);
 });
 

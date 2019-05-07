@@ -30,10 +30,10 @@ const vehicles = {
     'impaler'
   ],
   vagos: [
-    'hermes',
     'ellie',
     'chino',
-    'dukes'
+    'dukes',
+    'impaler'
   ]
 };
 
@@ -382,10 +382,8 @@ alt.on('playerConnect', (player) => {
   player.setMeta('checkpoint', 0);
   player.setMeta('vehicle', null);
   player.setMeta('canSpawnVehicle', 0);
-  player.setMeta('teamKills', 0);
+  player.setMeta('warns', 0);
 
-  //player.setMeta('respawnIntervalHandler', null);
-  //player.setMeta('intoVehTimeout', null);
   broadcastPlayersOnline();
 
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}connected`);
@@ -411,16 +409,6 @@ alt.on('playerDisconnect', (player) => {
   broadcastTeamsPopulation();
   broadcastPlayersOnline(-1);
 
-  // const respawnTimeout = player.getMeta('respawnIntervalHandler');
-  // if(respawnTimeout !== null) {
-  //   clearTimeout(respawnTimeout);
-  // }
-
-  // const intoVehTimeout = player.getMeta('intoVehTimeout');
-  // if(intoVehTimeout !== null) {
-  //   clearTimeout(intoVehTimeout);
-  // }
-
   chat.broadcast(`{5555AA}${player.name} {FFFFFF}disconnected`);
   alt.log(`${player.name} disconnected`);
 })
@@ -441,7 +429,10 @@ alt.onClient('teamSelected', (player, teamId) => {
   alt.log(player.name + ' joined ' + team);
   const nextSpawns = positions[team].spawns;
 
-  player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
+  const spawn = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
+  console.log('Spawning in ' + JSON.stringify(spawn));
+
+  player.spawn(spawn.x, spawn.y, spawn.z, 0);
   alt.emitClient(player, 'applyAppearance', team);
   alt.emitClient(player, 'updateTeam', team);
 
@@ -471,21 +462,14 @@ alt.onClient('action', (player) => {
 
     const nextModel = vehicles[pTeam][Math.round(Math.random() * (vehicles[pTeam].length - 1))];
     const vehColor = colors[pTeam].rgba;
-    curVeh = alt.createVehicle(nextModel, pos.x, pos.y, pos.z, 0);
+    curVeh = alt.createVehicle(nextModel, pos.x, pos.y, pos.z, 0, 0, 0);
     curVeh.customPrimaryColor = { r: vehColor.r, g: vehColor.g, b: vehColor.b };
     curVeh.customSecondaryColor = { r: vehColor.r, g: vehColor.g, b: vehColor.b };
-
-    // const prevTimeout = player.getMeta('intoVehTimeout');
-    // if(prevTimeout !== null) {
-    //   clearTimeout(prevTimeout);
-    // }
     
-    const nextTimeout = setTimeout(((player) => {
+    setTimeout(((player) => {
       alt.emitClient(player, 'setintoveh', curVeh);
       player.setMeta('intoVehTimeout', null);
     }).bind(null, player), 200);
-
-    //player.setMeta('intoVehTimeout', nextTimeout);
 
     player.setMeta('vehicle', curVeh);
     player.setMeta('canSpawnVehicle', Date.now() + 400);
@@ -514,25 +498,6 @@ alt.on('entityLeaveCheckpoint', (cp, entity) => {
     entity.setMeta('checkpoint', 0);
   }
 });
-
-function respawnPlayer(player) {
-  try {
-    const team = player.getMeta('team');
-
-    if(team in positions)
-    {
-      const nextSpawns = positions[team].spawns;
-      alt.log('Trying to respawn "' + player.name + '"');
-      player.pos = nextSpawns[Math.round(Math.random() * (nextSpawns.length - 1))];
-      alt.log('Respawning ' + player.name);
-      return;
-    }
-    player.pos = {x: 0, y: 0, z: 72};
-  }
-  catch(err) {
-    alt.logError(err.message);
-  }
-}
 
 alt.on('playerDead', (player, killer, weapon) => {
   let weaponName = 'Killed';
@@ -575,14 +540,25 @@ alt.on('playerDead', (player, killer, weapon) => {
     }
 
     if(team == killerTeam && player != killer) {
-      let teamKills = killer.getMeta('teamKills');
-      if(teamKills == 2) {
+      let warns = killer.getMeta('warns');
+      if(warns == 2) {
         chat.broadcast(`{5555AA}${killer.name} {AA0000}kicked for team killing`);
         killer.kick();
       }
       else {
-        chat.broadcast(`{5555AA}${killer.name} {AA0000}warned [${teamKills + 1}/3] for team killing`);
-        killer.setMeta('teamKills', (teamKills + 1));
+        chat.broadcast(`{5555AA}${killer.name} {AA0000}warned [${warns + 1}/3] for team killing`);
+        killer.setMeta('warns', (warns + 1));
+      }
+    }
+    else if(player != killer && weaponName == weapons.WEAPON_RUN_OVER_BY_CAR) {
+      let warns = killer.getMeta('warns');
+      if(warns == 2) {
+        chat.broadcast(`{5555AA}${killer.name} {AA0000}kicked for vehicle kill`);
+        killer.kick();
+      }
+      else {
+        chat.broadcast(`{5555AA}${killer.name} {AA0000}warned [${warns + 1}/3] for vehicle kill`);
+        killer.setMeta('warns', (warns + 1));
       }
     }
   }
