@@ -499,7 +499,7 @@ alt.on('entityLeaveCheckpoint', (cp, entity) => {
   }
 });
 
-alt.on('playerDead', (player, killer, weapon) => {
+alt.on('playerDeath', (player, killer, weapon) => {
   let weaponName = 'Killed';
   if(weapon in weaponHashes)
     weaponName = weaponHashes[weapon];
